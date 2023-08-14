@@ -65,6 +65,29 @@ class DependencySet:
         new_dependencies = list(set(self.dependencies + other.dependencies))
         return DependencySet(dependencies=new_dependencies)
 
+    def combine(self) :
+        depend_dict = dict()
+        for dependency in self.dependencies :
+            key = frozenset(dependency.A)
+            if key not in depend_dict :
+                depend_dict[key] = dependency.B
+                continue
+            
+            # Add dependency.B to depend_dict[key]
+            depend_dict[key] = depend_dict[key].union(dependency.B)
+        
+        other = DependencySet(dependencies= [])
+        
+        for key in depend_dict :
+            setA = set(key)
+            setB = depend_dict[key]
+            other.add(Dependency(input= [setA, setB]))
+            
+        return other
+            
+
+
+            
     def contain(self, other):
         if not isinstance(other, DependencySet):
             return False
@@ -169,7 +192,9 @@ class DependencySet:
     def extract(self):
         # Copy self to a new object to avoid changing on self
         other = self.copy()
-        for dependency in other.dependencies:
+        # DO NOT loop over other, due to changing in other
+        # So, we loop over self with more stable
+        for dependency in self.dependencies:
             if len(dependency.B) == 1:
                 continue
             # When dependent contains more than 1 element
@@ -188,15 +213,15 @@ class DependencySet:
                 continue
 
             # Remove redundant element in dependency.A
-            prev_dependencies = self.copy()
-            new_dependencies = self.copy()
-            current_dependencies = self.copy()
+            prev_dependencies = extracted_obj.copy()
+            new_dependencies = extracted_obj.copy()
+            current_dependencies = extracted_obj.copy()
             while True:
                 for attribute in dependency.A:
                     new_determinant = {i for i in dependency.A}
                     new_determinant.remove(attribute)
-                    adding_path = Dependency(input=[new_determinant, dependency.B])
-                    current_dependencies.add(adding_path)
+                    adding_part = Dependency(input=[new_determinant, dependency.B])
+                    current_dependencies.add(adding_part)
                     current_dependencies.remove(dependency)
 
                     # If current_dependencies+ = prev_dependencies+,
@@ -204,7 +229,7 @@ class DependencySet:
                     if current_dependencies == prev_dependencies:
                         new_dependencies = current_dependencies.copy()
                         # Replace dependency by adding_path
-                        dependency = adding_path
+                        dependency = adding_part
                     else:
                         # That means current_dependencies loose some information
                         # when compare to prev_dependencies, so change it to
@@ -228,7 +253,7 @@ class DependencySet:
             if new_dependencies == extracted_obj:
                 extracted_obj = new_dependencies
 
-        return extracted_obj
+        return extracted_obj.combine()
 
 
 #################################################################################
@@ -293,17 +318,13 @@ z2 = Dependency("E-AH")
 # print(second_obj)
 # print(first_obj == second_obj)
 
-print(1111111111)
-obj = DependencySet(dependencies=[])
-obj.add(Dependency(x1))
-obj.add(Dependency(x2))
-obj.add(Dependency(x3))
+# obj = DependencySet(dependencies=[])
+# obj.add(Dependency(x1))
+# obj.add(Dependency(x2))
+# obj.add(Dependency(x3))
 
-print(obj)
-new_obj = obj.extract()
-print(obj)
-print("After extracting: ", new_obj)
-print(obj.minimal_cover())
+# print(obj)
+# print("Minimal cover:", obj.minimal_cover())
 
 # attributes = input("Type list of attribute: ")
 # attributes = list(attributes.replace(" ", ""))
@@ -313,6 +334,7 @@ print(obj.minimal_cover())
 
 # print(obj.minimal_key())
 
+### Check equal method
 
 # first_obj = DependencySet(dependencies=[])
 # second_obj = DependencySet(dependencies=[])
@@ -331,3 +353,36 @@ print(obj.minimal_cover())
 # print(f"First obj: {first_obj}")
 # print(f"Second obj: {second_obj}")
 # print(first_obj == second_obj)
+
+### Check minimal_cover method
+# obj = DependencySet(dependencies=[])
+# obj.add(Dependency("A - B"))
+# obj.add(Dependency("ABCD - E"))
+# obj.add(Dependency("EF - GH"))
+# obj.add(Dependency("ACDF - EG"))
+# print(obj)
+# minimal = obj.minimal_cover()
+# print(minimal)
+# combined = minimal.combine()
+# print(combined)
+
+# print("Type dependencies: ")
+# while True:
+#     line = input()
+#     if line == "quit":
+#         break
+#     obj.add(Dependency(line))
+# print("Minimal cover:", obj.minimal_cover())
+
+### TEST
+obj = DependencySet(dependencies= [])
+print("Type dependencies: ")
+while True:
+    line = input()
+    if line == "quit":
+        break
+    obj.add(Dependency(line))
+attributes = input("ATTRIBUTE: ")
+print("CLOSURE:", obj.find_closure(attributes))
+print("MINIMAL COVER: ", obj.minimal_cover())
+print("MINIMAL KEY: ", obj.minimal_key())
